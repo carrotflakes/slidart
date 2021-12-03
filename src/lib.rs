@@ -9,6 +9,7 @@ pub struct Solver<R: RngCore> {
     pub open_node_count: usize,
     pub open_node_limit: usize,
     pub show_progress: bool,
+    pub check_mate_cutoff: usize,
     pub result: Option<Board>,
 }
 
@@ -20,48 +21,52 @@ impl<R: RngCore> Solver<R> {
             }
             let (score, mut board) = self.states.pop().unwrap();
             self.open_node_count += 1;
-            let distance = board.compute_distance(&self.goal);
+            let distance = compute_distance(&board, &self.goal);
             if self.show_progress && self.open_node_count % 1000 == 0 {
                 println!(
                     "open_node_count: {:>6}, distance: {:>3}, best score: {}",
                     self.open_node_count, distance, score
                 );
             }
-            if let Some(result) = board.check_mate(&self.goal, 10) {
+            if let Some(result) = check_mate(&mut board, &self.goal, self.check_mate_cutoff) {
                 self.result = Some(result);
                 return true;
             }
+            // if board.cells == self.goal.cells {
+            //     self.result = Some(board);
+            //     return true;
+            // }
             let mut add_state = |board: Board| {
                 if self.closed.contains(&board.cells) {
                     return;
                 } else {
                     self.closed.insert(board.cells.clone());
                 }
-                let score = (distance - board.compute_distance(&self.goal)) * 1000
+                let score = (distance - compute_distance(&board, &self.goal)) * 1000
                     // - board.path.len() as isize
-                    + board.index_distance(board.empty_cell, self.goal.empty_cell) * 1000;
+                    // + board.index_distance(board.empty_cell, self.goal.empty_cell) * 100
+                    ;
+                // let index = self
+                //     .states
+                //     .binary_search_by_key(&score, |s| s.0)
+                //     .unwrap_or_else(|x| x);
+                // let state = (score, board);
+                // self.states.insert(index, state);
                 self.states.push((score, board));
             };
             let cs = board.move_candidates();
-            if cs[0] {
-                let mut board = board.clone();
-                board.move_up();
-                add_state(board);
-            }
-            if cs[1] {
-                let mut board = board.clone();
-                board.move_right();
-                add_state(board);
-            }
-            if cs[2] {
-                let mut board = board.clone();
-                board.move_down();
-                add_state(board);
-            }
-            if cs[3] {
-                let mut board = board.clone();
-                board.move_left();
-                add_state(board);
+            let ps = [
+                board.empty_cell.overflowing_sub(board.width).0,
+                board.empty_cell + 1,
+                board.empty_cell + board.width,
+                board.empty_cell.overflowing_sub(1).0,
+            ];
+            for i in 0..4 {
+                if cs[i] {
+                    let mut board = board.clone();
+                    board.move_to(ps[i]);
+                    add_state(board);
+                }
             }
             // for i in 0..5 {
             //     let mut board = board.clone();
@@ -87,9 +92,159 @@ impl Solver<Lcg64Xsh32> {
             open_node_count: 0,
             open_node_limit: usize::MAX,
             show_progress: false,
+            check_mate_cutoff: 50,
             result: None,
         }
     }
+}
+
+pub fn compute_distance(board: &Board, goal: &Board) -> isize {
+    let width = board.width;
+    let height = board.cells.len() / board.width;
+    let mut distance = 0;
+    let f = |x: usize, y: usize| {
+        let p = x + y * width;
+        goal.cells[p] != 0 && board.cells[p] == goal.cells[p]
+    };
+    {
+        let mut max_y = height;
+        for x in 0..width {
+            for y in 0..max_y {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    max_y = y;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_y = 0;
+        for x in 0..width {
+            for y in (min_y..height).rev() {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    min_y = y + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_y = height;
+        for x in (0..width).rev() {
+            for y in 0..max_y {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    max_y = y;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_y = 0;
+        for x in (0..width).rev() {
+            for y in (min_y..height).rev() {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    min_y = y + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_x = width;
+        for y in 0..height {
+            for x in 0..max_x {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    max_x = x;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_x = 0;
+        for y in 0..height {
+            for x in (min_x..width).rev() {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    min_x = x + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_x = width;
+        for y in (0..height).rev() {
+            for x in 0..max_x {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    max_x = x;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_x = 0;
+        for y in (0..height).rev() {
+            for x in (min_x..width).rev() {
+                if f(x, y) {
+                    distance -= 1;
+                } else {
+                    min_x = x + 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    distance
+}
+
+pub fn check_mate(board: &mut Board, goal: &Board, cutoff: usize) -> Option<Board> {
+    if board.empty_cell == goal.empty_cell {
+        return if board.cells == goal.cells {
+            Some(board.clone())
+        } else {
+            None
+        };
+    }
+
+    if cutoff == 0 {
+        return None;
+    }
+
+    let cs = board.move_candidates();
+    let ps = [
+        board.empty_cell.overflowing_sub(board.width).0,
+        board.empty_cell + 1,
+        board.empty_cell + board.width,
+        board.empty_cell.overflowing_sub(1).0,
+    ];
+    for i in 0..4 {
+        if cs[i] && board.cells[ps[i]] == goal.cells[board.empty_cell] {
+            board.move_to(ps[i]);
+            let res = check_mate(board, goal, cutoff - 1);
+            board.undo();
+            if res.is_some() {
+                return res;
+            }
+        }
+    }
+    None
 }
 
 pub fn print_path(path: &[usize]) {
@@ -136,175 +291,6 @@ impl Board {
         }
     }
 
-    pub fn check_mate(&mut self, goal: &Board, cutoff: usize) -> Option<Board> {
-        if self.empty_cell == goal.empty_cell {
-            return if self.cells == goal.cells {
-                Some(self.clone())
-            } else {
-                None
-            };
-        }
-
-        if cutoff == 0 {
-            return None;
-        }
-
-        let cs = self.move_candidates();
-        if cs[0] && self.cells[self.empty_cell - self.width] == goal.cells[self.empty_cell] {
-            self.move_up();
-            let res = self.check_mate(goal, cutoff - 1);
-            self.undo();
-            if res.is_some() {
-                return res;
-            }
-        }
-        if cs[1] && self.cells[self.empty_cell + 1] == goal.cells[self.empty_cell] {
-            self.move_right();
-            let res = self.check_mate(goal, cutoff - 1);
-            self.undo();
-            if res.is_some() {
-                return res;
-            }
-        }
-        if cs[2] && self.cells[self.empty_cell + self.width] == goal.cells[self.empty_cell] {
-            self.move_down();
-            let res = self.check_mate(goal, cutoff - 1);
-            self.undo();
-            if res.is_some() {
-                return res;
-            }
-        }
-        if cs[3] && self.cells[self.empty_cell - 1] == goal.cells[self.empty_cell] {
-            self.move_left();
-            let res = self.check_mate(goal, cutoff - 1);
-            self.undo();
-            if res.is_some() {
-                return res;
-            }
-        }
-        None
-    }
-
-    pub fn compute_distance(&self, goal: &Board) -> isize {
-        let width = self.width;
-        let height = self.cells.len() / self.width;
-        let mut distance = 0;
-        {
-            let mut max_y = height;
-            for x in 0..width {
-                for y in 0..max_y {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        max_y = y;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut min_y = 0;
-            for x in 0..width {
-                for y in (min_y..height).rev() {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        min_y = y + 1;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut max_y = height;
-            for x in (0..width).rev() {
-                for y in 0..max_y {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        max_y = y;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut min_y = 0;
-            for x in (0..width).rev() {
-                for y in (min_y..height).rev() {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        min_y = y + 1;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut max_x = width;
-            for y in 0..height {
-                for x in 0..max_x {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        max_x = x;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut min_x = 0;
-            for y in 0..height {
-                for x in (min_x..width).rev() {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        min_x = x + 1;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut max_x = width;
-            for y in (0..height).rev() {
-                for x in 0..max_x {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        max_x = x;
-                        break;
-                    }
-                }
-            }
-        }
-        {
-            let mut min_x = 0;
-            for y in (0..height).rev() {
-                for x in (min_x..width).rev() {
-                    let p = x + y * width;
-                    if goal.cells[p] != 0 && self.cells[p] == goal.cells[p] {
-                        distance -= 1;
-                    } else {
-                        min_x = x + 1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        distance
-    }
-
     pub fn print(&self) {
         for y in 0..self.cells.len() / self.width {
             for x in 0..self.width {
@@ -346,35 +332,27 @@ impl Board {
 
     #[inline]
     pub fn move_up(&mut self) {
-        self.path.push(self.empty_cell);
-        let next_empty_cell = self.empty_cell - self.width;
-        self.cells[self.empty_cell] = self.cells[next_empty_cell];
-        self.cells[next_empty_cell] = 0;
-        self.empty_cell = next_empty_cell;
+        self.move_to(self.empty_cell - self.width);
     }
 
     #[inline]
     pub fn move_right(&mut self) {
-        self.path.push(self.empty_cell);
-        let next_empty_cell = self.empty_cell + 1;
-        self.cells[self.empty_cell] = self.cells[next_empty_cell];
-        self.cells[next_empty_cell] = 0;
-        self.empty_cell = next_empty_cell;
+        self.move_to(self.empty_cell + 1);
     }
 
     #[inline]
     pub fn move_down(&mut self) {
-        self.path.push(self.empty_cell);
-        let next_empty_cell = self.empty_cell + self.width;
-        self.cells[self.empty_cell] = self.cells[next_empty_cell];
-        self.cells[next_empty_cell] = 0;
-        self.empty_cell = next_empty_cell;
+        self.move_to(self.empty_cell + self.width);
     }
 
     #[inline]
     pub fn move_left(&mut self) {
+        self.move_to(self.empty_cell - 1);
+    }
+
+    #[inline]
+    pub fn move_to(&mut self, next_empty_cell: usize) {
         self.path.push(self.empty_cell);
-        let next_empty_cell = self.empty_cell - 1;
         self.cells[self.empty_cell] = self.cells[next_empty_cell];
         self.cells[next_empty_cell] = 0;
         self.empty_cell = next_empty_cell;
@@ -406,17 +384,16 @@ fn test_distance() {
     let seed = 0;
     let mut rnd = Pcg32::new(seed, 0xa02bdbf7bb3c0a7);
 
-    let initial_board =
-        Board::new(4, vec![0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
+    let initial_board = Board::new(4, vec![0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
     let mut board = initial_board.clone();
     for _ in 0..30 {
-        println!("distance: {}", board.compute_distance(&initial_board));
+        println!("distance: {}", compute_distance(&board, &initial_board));
         board.shuffle(1, &mut rnd);
     }
     board.print();
     board.shuffle(100, &mut rnd);
     board.print();
-    println!("distance: {}", board.compute_distance(&initial_board));
+    println!("distance: {}", compute_distance(&board, &initial_board));
 
     // let initial_board = Board::new(4, vec![0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
     // let mut board = initial_board.clone();
