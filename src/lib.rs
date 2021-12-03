@@ -76,11 +76,11 @@ impl<R: RngCore> Solver<R> {
                     add_state(board);
                 }
             }
-            // for i in 0..5 {
-            //     let mut board = board.clone();
-            //     board.shuffle(4, &mut self.rng);
-            //     add_state(board);
-            // }
+            for _ in 0..1 {
+                let mut board = board.clone();
+                board.shuffle(10, &mut self.rng);
+                add_state(board);
+            }
             self.states.sort_unstable_by_key(|s| s.0);
             self.states.truncate(1000);
         }
