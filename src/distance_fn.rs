@@ -135,6 +135,29 @@ pub fn compute_distance2(board: &Board, goal: &Board) -> isize {
     distance
 }
 
+pub fn compute_distance3(board: &Board, goal: &Board) -> isize {
+    let width = board.width;
+    let height = board.cells.len() / board.width;
+    let mut used = vec![false; width * height];
+    let mut distance = 0;
+    for i in 0..width * height {
+        if board.cells[i] == 0 {
+            continue;
+        }
+        let mut d = isize::MAX;
+        let mut jj = 0;
+        for j in 0..width * height {
+            if !used[j] && board.cells[i] == goal.cells[j] {
+                d = d.min(board.index_distance(i, j));
+                jj = j;
+            }
+        }
+        distance += d * d;// * board.index_distance(i, goal.empty_cell);
+        used[jj] = true;
+    }
+    distance
+}
+
 #[test]
 fn test_distance() {
     let seed = 0;
