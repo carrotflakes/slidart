@@ -32,8 +32,8 @@ impl<R: RngCore> Solver<R> {
             }
             let State { score, mut board } = self.states.pop().unwrap();
             self.open_node_count += 1;
-            let distance = (self.distance_fn)(&board, &self.goal);
             if self.show_progress && self.open_node_count % 1000 == 0 {
+                let distance = (self.distance_fn)(&board, &self.goal);
                 println!(
                     "open_node_count: {:>6}, distance: {:>3}, best score: {}",
                     self.open_node_count, distance, score
@@ -54,8 +54,7 @@ impl<R: RngCore> Solver<R> {
                 } else {
                     self.closed.insert(board.cells.clone());
                 }
-                let score =
-                    (self.score_fn)(&board, (self.distance_fn)(&board, &self.goal) - distance);
+                let score = (self.score_fn)(&board, (self.distance_fn)(&board, &self.goal));
                 self.states.push(State { score, board });
             };
             let cs = board.move_candidates();
