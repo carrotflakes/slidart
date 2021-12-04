@@ -124,13 +124,13 @@ pub fn compute_distance2(board: &Board, goal: &Board) -> isize {
         if board.cells[i] == 0 {
             continue;
         }
-        let mut d = 100;
+        let mut d = isize::MAX;
         for j in 0..width * height {
             if board.cells[i] == goal.cells[j] {
                 d = d.min(board.index_distance(i, j));
             }
         }
-        distance += d * d;
+        distance += d * d;// * board.index_distance(i, goal.empty_cell);
     }
     distance
 }

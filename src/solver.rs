@@ -40,7 +40,7 @@ impl<R: RngCore> Solver<R> {
                 );
             }
             if let Some(result) = check_mate(&mut board, &self.goal, self.check_mate_cutoff) {
-                // if let Some(result) = check_mate2(&mut board, &self.goal) {
+                // if let Some(result) = crate::check_mate2(&mut board, &self.goal) {
                 self.result = Some(result);
                 return true;
             }
@@ -86,6 +86,12 @@ impl<R: RngCore> Solver<R> {
 
 impl Solver<rand_pcg::Lcg64Xsh32> {
     pub fn new(goal: Board, board: Board) -> Self {
+        let mut c1 = goal.cells.clone();
+        c1.sort_unstable();
+        let mut c2 = board.cells.clone();
+        c2.sort_unstable();
+        assert!(c1 == c2);
+
         let seed = 0;
         let rng = rand_pcg::Pcg32::new(seed, 0xa02bdbf7bb3c0a7);
         Self {
