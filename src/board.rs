@@ -1,6 +1,6 @@
 use rand_core::RngCore;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone)]
 pub struct Board {
     pub width: usize,
     pub cells: Vec<u8>,

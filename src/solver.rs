@@ -2,11 +2,16 @@ use rand_core::RngCore;
 
 use crate::{check_mate, Board};
 
+pub struct State {
+    board: Board,
+    score: isize,
+}
+
 pub struct Solver<R: RngCore> {
     pub rng: R,
     pub goal: Board,
-    pub states: Vec<(isize, Board)>,
-    // pub states: std::collections::BinaryHeap<(isize, Board)>,
+    // pub states: Vec<State>,
+    pub states: std::collections::BinaryHeap<State>,
     pub closed: std::collections::HashSet<Vec<u8>>,
     pub open_node_count: usize,
     pub open_node_limit: usize,
@@ -25,7 +30,7 @@ impl<R: RngCore> Solver<R> {
             if self.open_node_count >= self.open_node_limit {
                 return false;
             }
-            let (score, mut board) = self.states.pop().unwrap();
+            let State { score, mut board } = self.states.pop().unwrap();
             self.open_node_count += 1;
             let distance = (self.distance_fn)(&board, &self.goal);
             if self.show_progress && self.open_node_count % 1000 == 0 {
@@ -49,14 +54,9 @@ impl<R: RngCore> Solver<R> {
                 } else {
                     self.closed.insert(board.cells.clone());
                 }
-                let score = (self.score_fn)(&board, (self.distance_fn)(&board, &self.goal) - distance);
-                // let index = self
-                //     .states
-                //     .binary_search_by_key(&score, |s| s.0)
-                //     .unwrap_or_else(|x| x);
-                // let state = (score, board);
-                // self.states.insert(index, state);
-                self.states.push((score, board));
+                let score =
+                    (self.score_fn)(&board, (self.distance_fn)(&board, &self.goal) - distance);
+                self.states.push(State { score, board });
             };
             let cs = board.move_candidates();
             let ps = [
@@ -77,8 +77,8 @@ impl<R: RngCore> Solver<R> {
                 board.shuffle(self.random_walk_len, &mut self.rng);
                 add_state(board);
             }
-            self.states.sort_unstable_by_key(|s| s.0);
-            self.states.truncate(1000);
+            // self.states.sort_unstable_by_key(|s| s.score);
+            // self.states.truncate(1000);
         }
         false
     }
@@ -92,7 +92,7 @@ impl Solver<rand_pcg::Lcg64Xsh32> {
             rng,
             goal,
             closed: vec![board.cells.clone()].into_iter().collect(),
-            states: vec![(0, board)].into(),
+            states: vec![State { score: 0, board }].into(),
             open_node_count: 0,
             open_node_limit: usize::MAX,
             show_progress: false,
@@ -103,5 +103,25 @@ impl Solver<rand_pcg::Lcg64Xsh32> {
             distance_fn: Box::new(crate::compute_distance2),
             result: None,
         }
+    }
+}
+
+impl PartialEq for State {
+    fn eq(&self, other: &State) -> bool {
+        self.score == other.score
+    }
+}
+
+impl Eq for State {}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.score.partial_cmp(&other.score)
+    }
+}
+
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.score.cmp(&other.score)
     }
 }
