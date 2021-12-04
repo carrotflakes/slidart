@@ -158,6 +158,142 @@ pub fn compute_distance3(board: &Board, goal: &Board) -> isize {
     distance
 }
 
+pub fn compute_distance4(board: &Board, goal: &Board) -> isize {
+    let width = board.width;
+    let height = board.cells.len() / board.width;
+    let f = |x: usize, y: usize| {
+        let p = x + y * width;
+        goal.cells[p] != 0 && board.cells[p] == goal.cells[p]
+    };
+    let mut ss = vec![1; board.cells.len()];
+    {
+        let mut max_y = height;
+        for x in 0..width {
+            for y in 0..max_y {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    max_y = y;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_y = 0;
+        for x in 0..width {
+            for y in (min_y..height).rev() {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    min_y = y + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_y = height;
+        for x in (0..width).rev() {
+            for y in 0..max_y {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    max_y = y;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_y = 0;
+        for x in (0..width).rev() {
+            for y in (min_y..height).rev() {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    min_y = y + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_x = width;
+        for y in 0..height {
+            for x in 0..max_x {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    max_x = x;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_x = 0;
+        for y in 0..height {
+            for x in (min_x..width).rev() {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    min_x = x + 1;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut max_x = width;
+        for y in (0..height).rev() {
+            for x in 0..max_x {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    max_x = x;
+                    break;
+                }
+            }
+        }
+    }
+    {
+        let mut min_x = 0;
+        for y in (0..height).rev() {
+            for x in (min_x..width).rev() {
+                if f(x, y) {
+                    ss[x + y * width] += 1;
+                } else {
+                    min_x = x + 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    // dbg!(&ss);
+
+    let mut distance = 0;
+    for i in 0..width * height {
+        if board.cells[i] == 0 {
+            continue;
+        }
+        let mut d = isize::MAX;
+        for j in 0..width * height {
+            if board.cells[i] == goal.cells[j] {
+                d = d.min(board.index_distance(i, j));
+            }
+        }
+        distance += if d == 0 {
+            -ss[i]
+        } else {
+            d * d
+        };
+    }
+
+    distance
+}
+
 #[test]
 fn test_distance() {
     let seed = 0;
@@ -166,13 +302,13 @@ fn test_distance() {
     let initial_board = Board::new(4, vec![0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
     let mut board = initial_board.clone();
     for _ in 0..30 {
-        println!("distance: {}", compute_distance2(&board, &initial_board));
+        println!("distance: {}", compute_distance4(&board, &initial_board));
         board.shuffle(1, &mut rnd);
     }
     board.print();
     board.shuffle(100, &mut rnd);
     board.print();
-    println!("distance: {}", compute_distance2(&board, &initial_board));
+    println!("distance: {}", compute_distance4(&board, &initial_board));
 
     // let initial_board = Board::new(4, vec![0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
     // let mut board = initial_board.clone();

@@ -1,6 +1,7 @@
 use rand_pcg::Pcg32;
 use slidart::{Board, Solver};
 
+#[allow(dead_code)]
 enum Level {
     Easy,
     Medium,
@@ -36,7 +37,7 @@ fn main() {
         let mut solver = Solver::new(goal.clone(), board);
         solver.show_progress = false;
         solver.open_node_limit = 10000;
-        solver.distance_fn = Box::new(slidart::compute_distance2);
+        solver.distance_fn = Box::new(slidart::compute_distance4);
 
         attempt += 1;
         if solver.search() {

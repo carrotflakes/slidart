@@ -22,10 +22,10 @@ fn main() {
 
     solver.show_progress = true;
     solver.check_mate_cutoff = 10;
-    solver.random_walk = 1;
+    solver.random_walk = 0;
     solver.random_walk_len = 3;
-    // solver.score_fn = Box::new(|board, distance| -distance * 1000 - board.path.len() as isize);
-    solver.distance_fn = Box::new(slidart::compute_distance2);
+    solver.score_fn = Box::new(|board, distance| -distance * 1000 - board.path.len() as isize);
+    solver.distance_fn = Box::new(slidart::compute_distance4);
     // solver.distance_fn = Box::new(|a, b| slidart::compute_distance1(a, b) + slidart::compute_distance2(a, b));
     solver.search();
 
