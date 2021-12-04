@@ -3,6 +3,8 @@
 
 use std::io::{Read, Write};
 
+use slidart::Board;
+
 fn main() {
     let filepath = std::env::args()
         .skip(1)
@@ -20,6 +22,10 @@ fn main() {
 
     solver.show_progress = true;
     solver.check_mate_cutoff = 10;
+    solver.random_walk = 1;
+    solver.random_walk_len = 3;
+    // solver.score_fn = Box::new(|board, distance| -distance * 1000 - board.path.len() as isize);
+    solver.distance_fn = Box::new(slidart::compute_distance2);
     solver.search();
 
     if let Some(result) = solver.result {
@@ -34,7 +40,7 @@ fn main() {
     }
 }
 
-fn string_to_board(s: &str) -> slidart::Board {
+fn string_to_board(s: &str) -> Board {
     let mut cells = vec![];
     let width = s.find("\n").unwrap();
     for c in s.chars() {
@@ -46,10 +52,10 @@ fn string_to_board(s: &str) -> slidart::Board {
             _ => {}
         }
     }
-    slidart::Board::new(width, cells)
+    Board::new(width, cells)
 }
 
-fn output_pgms(board: &slidart::Board) {
+fn output_pgms(board: &Board) {
     let mut board = board.clone();
     std::fs::create_dir_all("output").unwrap();
     while !board.path.is_empty() {
@@ -61,7 +67,7 @@ fn output_pgms(board: &slidart::Board) {
     }
 }
 
-fn board_to_pgm(board: &slidart::Board) -> String {
+fn board_to_pgm(board: &Board) -> String {
     let height = board.cells.len() / board.width;
     let mut s = format!(
         "P2\n{} {}\n{}\n",

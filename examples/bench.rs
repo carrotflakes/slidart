@@ -15,6 +15,7 @@ fn main() {
         let mut solver = Solver::new(goal, board);
         solver.show_progress = false;
         solver.open_node_limit = 10000;
+        solver.distance_fn = Box::new(slidart::compute_distance2);
 
         attempt += 1;
         if solver.search() {

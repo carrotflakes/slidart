@@ -8,7 +8,7 @@ fn main() {
     let mut board = goal.clone();
     board.shuffle(30, &mut rng);
     slidart::print_path(&board.path);
-    println!("distance: {}", slidart::compute_distance(&board, &goal));
+    println!("distance: {}", slidart::compute_distance2(&board, &goal));
     board.path = vec![];
     board.print();
     println!("=== search ===");
