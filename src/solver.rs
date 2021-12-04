@@ -2,6 +2,7 @@ use rand_core::RngCore;
 
 use crate::{check_mate, Board};
 
+#[derive(Clone)]
 pub struct State {
     board: Board,
     score: isize,
@@ -13,6 +14,7 @@ pub struct Solver<R: RngCore> {
     // pub states: Vec<State>,
     pub states: std::collections::BinaryHeap<State>,
     pub closed: std::collections::HashSet<Vec<u8>>,
+    pub best_state: State,
     pub open_node_count: usize,
     pub open_node_limit: usize,
     pub show_progress: bool,
@@ -32,12 +34,13 @@ impl<R: RngCore> Solver<R> {
             }
             let State { score, mut board } = self.states.pop().unwrap();
             self.open_node_count += 1;
-            if self.show_progress && self.open_node_count % 1000 == 0 {
+            if self.show_progress && self.open_node_count % 10000 == 0 {
                 let distance = (self.distance_fn)(&board, &self.goal);
                 println!(
-                    "open_node_count: {:>6}, distance: {:>3}, best score: {}",
-                    self.open_node_count, distance, score
+                    "open_node_count: {:>6}, distance: {:>3}, current score: {:>5}, best score: {:>5}",
+                    self.open_node_count, distance, score, self.best_state.score
                 );
+                self.best_state.board.print();
             }
             if let Some(result) = check_mate(&mut board, &self.goal, self.check_mate_cutoff) {
                 // if let Some(result) = crate::check_mate2(&mut board, &self.goal) {
@@ -55,7 +58,13 @@ impl<R: RngCore> Solver<R> {
                     self.closed.insert(board.cells.clone());
                 }
                 let score = (self.score_fn)(&board, (self.distance_fn)(&board, &self.goal));
-                self.states.push(State { score, board });
+                if score > self.best_state.score {
+                    self.best_state = State {
+                        board: board.clone(),
+                        score,
+                    };
+                }
+                self.states.push(State { board, score });
             };
             let cs = board.move_candidates();
             let ps = [
@@ -93,11 +102,16 @@ impl Solver<rand_pcg::Lcg64Xsh32> {
 
         let seed = 0;
         let rng = rand_pcg::Pcg32::new(seed, 0xa02bdbf7bb3c0a7);
+        let state = State {
+            board,
+            score: isize::MIN,
+        };
         Self {
             rng,
             goal,
-            closed: vec![board.cells.clone()].into_iter().collect(),
-            states: vec![State { score: 0, board }].into(),
+            closed: vec![state.board.cells.clone()].into_iter().collect(),
+            states: vec![state.clone()].into(),
+            best_state: state,
             open_node_count: 0,
             open_node_limit: usize::MAX,
             show_progress: false,

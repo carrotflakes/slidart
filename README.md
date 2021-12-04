@@ -1,7 +1,12 @@
 # slidart
 
 ![smile](smile.gif)
-![rainbow](rainbow.gif)
+
+![rainbow5](rainbow5.gif)
+
+![move_a_dot](move_a_dot.gif)
+
+![hello](hello.gif)
 
 ## Copyright
 
