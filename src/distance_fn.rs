@@ -278,20 +278,20 @@ pub fn compute_distance4(board: &Board, goal: &Board) -> isize {
         if board.cells[i] == 0 {
             continue;
         }
+        if board.cells[i] == goal.cells[i] {
+            distance -= ss[i] * ss[i];// + board.index_distance(i, goal.empty_cell);
+            continue;
+        }
         let mut d = isize::MAX;
         for j in 0..width * height {
-            if board.cells[i] == goal.cells[j] {
+            if board.cells[j] != goal.cells[j] && board.cells[i] == goal.cells[j] {
                 d = d.min(board.index_distance(i, j));
             }
         }
-        distance += if d == 0 {
-            -ss[i]
-        } else {
-            d * d
-        };
+        distance += d * d;
     }
 
-    distance
+    distance// - board.index_distance(board.empty_cell, goal.empty_cell) * 2
 }
 
 #[test]

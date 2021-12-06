@@ -86,7 +86,7 @@ impl<R: RngCore> Solver<R> {
                 add_state(board);
             }
             // self.states.sort_unstable_by_key(|s| s.score);
-            // self.states.truncate(1000);
+            // self.states.truncate(10000);
         }
         false
     }
@@ -115,7 +115,7 @@ impl Solver<rand_pcg::Lcg64Xsh32> {
             open_node_count: 0,
             open_node_limit: usize::MAX,
             show_progress: false,
-            check_mate_cutoff: 50,
+            check_mate_cutoff: 10,
             random_walk: 1,
             random_walk_len: 10,
             score_fn: Box::new(|_, distance| -distance),

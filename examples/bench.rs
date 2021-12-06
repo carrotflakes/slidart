@@ -9,7 +9,7 @@ enum Level {
 }
 
 fn main() {
-    let level = Level::Medium;
+    let level = Level::Hard;
     let mut attempt = 0;
     let mut succeeded = 0;
     let mut total_path_length = 0;

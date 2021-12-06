@@ -19,15 +19,32 @@ fn main() {
     let board = string_to_board(header.trim());
     let goal = string_to_board(body.trim());
     let mut solver = slidart::Solver::new(goal, board);
+    let desire_len = 3000;
+    // smile: 30
+    // rainbow: 56
+    // rainbow5: 120
+    // four squares: 128
+    // move a dot: 68
+    // hello: 474
+    // carrot2: 1262
 
     solver.show_progress = true;
     solver.check_mate_cutoff = 10;
     solver.random_walk = 0;
-    solver.random_walk_len = 3;
-    solver.score_fn = Box::new(|board, distance| -distance * 1000 - board.path.len() as isize);
+    solver.random_walk_len = 4;
+    solver.score_fn = Box::new(|board, distance| -distance * 100 - board.path.len() as isize * 1);
     solver.distance_fn = Box::new(slidart::compute_distance4);
     // solver.distance_fn = Box::new(|a, b| slidart::compute_distance1(a, b) + slidart::compute_distance2(a, b));
-    solver.search();
+
+    while solver
+        .result
+        .as_ref()
+        .map(|b| b.path.len())
+        .unwrap_or(usize::MAX)
+        > desire_len
+    {
+        solver.search();
+    }
 
     if let Some(result) = solver.result {
         println!("search nodes: {}", solver.open_node_count);
